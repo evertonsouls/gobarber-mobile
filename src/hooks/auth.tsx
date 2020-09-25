@@ -26,6 +26,7 @@ interface AuthContextData {
   loading: boolean;
   signIn(credentials: SignInCredentials): Promise<void>;
   signOut(): void;
+  updateUser(user: User): Promise<void>;
 }
 
 interface AuthState {
@@ -37,7 +38,7 @@ const AuthContext = createContext<AuthContextData>({} as AuthContextData);
 
 const AuthProvider: React.FC = ({ children }) => {
   const [loading, setLoading] = useState(true);
-  const [data, setDate] = useState<AuthState>({} as AuthState);
+  const [data, setData] = useState<AuthState>({} as AuthState);
 
   useEffect(() => {
     async function loadStorageData() {
@@ -47,7 +48,7 @@ const AuthProvider: React.FC = ({ children }) => {
       ]);
 
       if (token[1] && user[1]) {
-        setDate({ token: token[1], user: JSON.parse(user[1]) });
+        setData({ token: token[1], user: JSON.parse(user[1]) });
 
         api.defaults.headers.authorization = `Bearer ${token[1]}`;
       }
@@ -70,7 +71,7 @@ const AuthProvider: React.FC = ({ children }) => {
 
     api.defaults.headers.authorization = `Bearer ${token}`;
 
-    setDate({ token, user });
+    setData({ token, user });
   }, []);
 
   const signOut = useCallback(async () => {
@@ -78,11 +79,22 @@ const AuthProvider: React.FC = ({ children }) => {
 
     api.defaults.headers.authorization = undefined;
 
-    setDate({} as AuthState);
+    setData({} as AuthState);
+  }, []);
+
+  const updateUser = useCallback(async (user: User) => {
+    setData(state => ({
+      token: state.token,
+      user,
+    }));
+
+    await AsyncStorage.setItem('@GoBarber:user', JSON.stringify(user));
   }, []);
 
   return (
-    <AuthContext.Provider value={{ loading, user: data.user, signIn, signOut }}>
+    <AuthContext.Provider
+      value={{ loading, user: data.user, signIn, signOut, updateUser }}
+    >
       {children}
     </AuthContext.Provider>
   );
